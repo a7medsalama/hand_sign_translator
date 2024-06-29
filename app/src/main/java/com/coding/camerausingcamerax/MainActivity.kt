@@ -1,10 +1,10 @@
 package com.coding.camerausingcamerax
 
+
 import android.content.ContentValues
 import android.content.DialogInterface
 import android.content.pm.PackageManager
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
+import android.graphics.RectF
 import android.os.*
 import android.provider.MediaStore
 import android.util.Log
@@ -27,14 +27,9 @@ import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.coding.camerausingcamerax.databinding.ActivityMainBinding
-import java.io.ByteArrayOutputStream
-import java.io.DataOutputStream
 import java.io.File
-import java.net.HttpURLConnection
-import java.net.URL
 import java.text.SimpleDateFormat
 import java.util.Locale
-import java.util.UUID
 import java.util.concurrent.TimeUnit
 
 class MainActivity : AppCompatActivity() {
@@ -42,6 +37,7 @@ class MainActivity : AppCompatActivity() {
     private val mainBinding: ActivityMainBinding by lazy {
         ActivityMainBinding.inflate(layoutInflater)
     }
+
 
     private val multiplePermissionId = 14
     private val multiplePermissionNameList = if (Build.VERSION.SDK_INT >= 33) {
@@ -72,7 +68,7 @@ class MainActivity : AppCompatActivity() {
 
     private val captureRunnable = object : Runnable {
         override fun run() {
-            takePhotoAndUpload()
+            takePhoto()
             handler.postDelayed(this, 2000)
         }
     }
@@ -97,13 +93,11 @@ class MainActivity : AppCompatActivity() {
         mainBinding.captureIB.setOnClickListener {
             if (!isRecording) {
                 isRecording = true
-                mainBinding.captureIB.setImageResource(R.drawable.ic_start)
                 handler.removeCallbacks(captureRunnable)
                 captureVideo()
-            } else if (isRecording){
+            } else {
                 isRecording = false
                 handler.post(captureRunnable)
-                mainBinding.captureIB.setImageResource(R.drawable.camera)
             }
         }
 
@@ -111,6 +105,7 @@ class MainActivity : AppCompatActivity() {
             mainBinding.signText.text = ""
         }
     }
+
 
     private fun checkMultiplePermission(): Boolean {
         val listPermissionNeeded = arrayListOf<String>()
@@ -195,6 +190,7 @@ class MainActivity : AppCompatActivity() {
         }, ContextCompat.getMainExecutor(this))
     }
 
+
     private fun bindCameraUserCases() {
         val rotation = mainBinding.previewView.display.rotation
 
@@ -257,14 +253,15 @@ class MainActivity : AppCompatActivity() {
             cameraProvider.unbindAll()
 
             camera = cameraProvider.bindToLifecycle(
-                this, cameraSelector, preview, imageCapture, videoCapture
+                this, cameraSelector, preview, imageCapture,videoCapture
             )
         } catch (e: Exception) {
             e.printStackTrace()
         }
     }
 
-    private fun takePhotoAndUpload() {
+    private fun takePhoto() {
+
         val imageFolder = File(
             Environment.getExternalStoragePublicDirectory(
                 Environment.DIRECTORY_PICTURES
@@ -278,10 +275,10 @@ class MainActivity : AppCompatActivity() {
             .format(System.currentTimeMillis()) + ".jpg"
 
         val contentValues = ContentValues().apply {
-            put(MediaStore.Images.Media.DISPLAY_NAME, fileName)
-            put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
-            if (Build.VERSION.SDK_INT > Build.VERSION_CODES.P) {
-                put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/Images")
+            put(MediaStore.Images.Media.DISPLAY_NAME,fileName)
+            put(MediaStore.Images.Media.MIME_TYPE,"image/jpeg")
+            if (Build.VERSION.SDK_INT > Build.VERSION_CODES.P){
+                put(MediaStore.Images.Media.RELATIVE_PATH,"Pictures/Images")
             }
         }
 
@@ -295,7 +292,7 @@ class MainActivity : AppCompatActivity() {
                     MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
                     contentValues
                 ).setMetadata(metadata).build()
-            } else {
+            }else{
                 val imageFile = File(imageFolder, fileName)
                 OutputFileOptions.Builder(imageFile)
                     .setMetadata(metadata).build()
@@ -312,13 +309,6 @@ class MainActivity : AppCompatActivity() {
                         message,
                         Toast.LENGTH_LONG
                     ).show()
-
-                    // Upload the captured image
-                    val imageUri = outputFileResults.savedUri
-                    if (imageUri != null) {
-                        val bitmap = MediaStore.Images.Media.getBitmap(contentResolver, imageUri)
-                        uploadImageToServer(bitmap)
-                    }
                 }
 
                 override fun onError(exception: ImageCaptureException) {
@@ -333,62 +323,12 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
-    private fun uploadImageToServer(bitmap: Bitmap) {
-        Thread {
-            try {
-                val url = URL("https://koala-large-jointly.ngrok-free.app/predict/en") // BASE URL
-                val boundary = UUID.randomUUID().toString()
-                val lineEnd = "\r\n"
-                val twoHyphens = "--"
-                val mimeType = "multipart/form-data;boundary=$boundary"
+    private fun captureVideo(){
 
-                val connection = url.openConnection() as HttpURLConnection
-                connection.doInput = true
-                connection.doOutput = true
-                connection.useCaches = false
-                connection.requestMethod = "POST"
-                connection.setRequestProperty("Connection", "Keep-Alive")
-                connection.setRequestProperty("ENCTYPE", mimeType)
-                connection.setRequestProperty("Content-Type", mimeType)
-                connection.setRequestProperty("Accept", "application/json")
-
-                val outputStream = DataOutputStream(connection.outputStream)
-                outputStream.writeBytes(twoHyphens + boundary + lineEnd)
-                outputStream.writeBytes("Content-Disposition: form-data; name=\"file\"; filename=\"image.jpg\"" + lineEnd)
-                outputStream.writeBytes("Content-Type: image/jpeg" + lineEnd)
-                outputStream.writeBytes(lineEnd)
-
-                val byteArrayOutputStream = ByteArrayOutputStream()
-                bitmap.compress(Bitmap.CompressFormat.JPEG, 100, byteArrayOutputStream)
-                val imageBytes = byteArrayOutputStream.toByteArray()
-
-                outputStream.write(imageBytes)
-                outputStream.writeBytes(lineEnd)
-                outputStream.writeBytes(twoHyphens + boundary + twoHyphens + lineEnd)
-                outputStream.flush()
-                outputStream.close()
-
-                val responseCode = connection.responseCode
-                if (responseCode == 200) {
-                    Log.d("Upload", "Upload successful")
-                } else {
-                    Log.e("Upload", "Upload failed with response code $responseCode")
-                }
-
-                connection.disconnect()
-            } catch (e: Exception) {
-                Log.e("Upload", "Error uploading image", e)
-            }
-        }.start()
-    }
-
-    private fun captureVideo() {
         mainBinding.captureIB.isEnabled = false
 
-        mainBinding.flipCameraIB.gone()
-
         val curRecording = recording
-        if (curRecording != null) {
+        if (curRecording != null){
             curRecording.stop()
             stopRecording()
             recording = null
@@ -399,15 +339,15 @@ class MainActivity : AppCompatActivity() {
             .format(System.currentTimeMillis()) + ".mp4"
 
         val contentValues = ContentValues().apply {
-            put(MediaStore.Images.Media.DISPLAY_NAME, fileName)
-            put(MediaStore.Images.Media.MIME_TYPE, "video/mp4")
-            if (Build.VERSION.SDK_INT > Build.VERSION_CODES.P) {
-                put(MediaStore.Images.Media.RELATIVE_PATH, "Video")
+            put(MediaStore.Images.Media.DISPLAY_NAME,fileName)
+            put(MediaStore.Images.Media.MIME_TYPE,"video/mp4")
+            if (Build.VERSION.SDK_INT > Build.VERSION_CODES.P){
+                put(MediaStore.Images.Media.RELATIVE_PATH,"Video")
             }
         }
 
         val mediaStoreOutputOptions = MediaStoreOutputOptions
-            .Builder(contentResolver, MediaStore.Video.Media.EXTERNAL_CONTENT_URI)
+            .Builder(contentResolver,MediaStore.Video.Media.EXTERNAL_CONTENT_URI)
             .setContentValues(contentValues)
             .build()
 
@@ -422,22 +362,21 @@ class MainActivity : AppCompatActivity() {
                     withAudioEnabled()
                 }
             }
-            .start(ContextCompat.getMainExecutor(this)) { recordEvent ->
-                when (recordEvent) {
+            .start(ContextCompat.getMainExecutor(this)){recordEvent->
+                when(recordEvent){
                     is VideoRecordEvent.Start -> {
                         mainBinding.captureIB.setImageResource(R.drawable.ic_stop)
                         mainBinding.captureIB.isEnabled = true
-                        handler.post(captureRunnable)
                     }
                     is VideoRecordEvent.Finalize -> {
-                        if (!recordEvent.hasError()) {
+                        if (!recordEvent.hasError()){
                             val message = "Video Capture Succeeded: " + "${recordEvent.outputResults.outputUri}"
                             Toast.makeText(
                                 this@MainActivity,
                                 message,
                                 Toast.LENGTH_LONG
                             ).show()
-                        } else {
+                        }else{
                             recording?.close()
                             recording = null
                             Log.d("error", recordEvent.error.toString())
@@ -445,11 +384,12 @@ class MainActivity : AppCompatActivity() {
                         mainBinding.captureIB.setImageResource(R.drawable.ic_start)
                         mainBinding.captureIB.isEnabled = true
                         mainBinding.flipCameraIB.visible()
-                        handler.removeCallbacks(captureRunnable)
                     }
                 }
             }
+
     }
+
 
     override fun onResume() {
         super.onResume()
@@ -459,49 +399,42 @@ class MainActivity : AppCompatActivity() {
     override fun onPause() {
         super.onPause()
         orientationEventListener?.disable()
-        if (recording != null) {
+        if (recording != null){
             recording?.stop()
             captureVideo()
         }
     }
 
     private val handler = Handler(Looper.getMainLooper())
-    private val updateTimer = object : Runnable {
+    private val updateTimer = object : Runnable{
         override fun run() {
             val currentTime = SystemClock.elapsedRealtime() - mainBinding.recodingTimerC.base
             val timeString = currentTime.toFormattedTime()
             mainBinding.recodingTimerC.text = timeString
-            handler.postDelayed(this, 1000)
+            handler.postDelayed(this,1000)
         }
     }
 
-    private fun Long.toFormattedTime(): String {
+    private fun Long.toFormattedTime():String{
         val seconds = ((this / 1000) % 60).toInt()
         val minutes = ((this / (1000 * 60)) % 60).toInt()
         val hours = ((this / (1000 * 60 * 60)) % 24).toInt()
 
-        return if (hours > 0) {
-            String.format("%02d:%02d:%02d", hours, minutes, seconds)
-        } else {
-            String.format("%02d:%02d", minutes, seconds)
+        return if (hours >0){
+            String.format("%02d:%02d:%02d",hours,minutes,seconds)
+        }else{
+            String.format("%02d:%02d",minutes,seconds)
         }
     }
 
-    private fun startRecording() {
+    private fun startRecording(){
         mainBinding.recodingTimerC.base = SystemClock.elapsedRealtime()
         mainBinding.recodingTimerC.start()
         handler.post(updateTimer)
     }
-
-    private fun stopRecording() {
+    private fun stopRecording(){
         mainBinding.recodingTimerC.stop()
         handler.removeCallbacks(updateTimer)
     }
 
-    //    private fun uploadImageOnCameraStart() {
-    //        // Optional: Adjust delay or handling as per your app's needs
-    //        handler.postDelayed({
-    //            takePhoto()
-    //        }, 2000) // Delayed execution to allow camera setup
-    //    }
 }
