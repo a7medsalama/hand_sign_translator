@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/black"
+    tools:context=".MainActivity">
+
+    <androidx.camera.view.PreviewView
+        android:id="@+id/previewView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        />
+    <ImageButton
+        android:id="@+id/captureIB"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:src="@drawable/camera"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:scaleType="centerCrop"
+        android:layout_centerHorizontal="true"
+        android:layout_alignParentBottom="true"
+        android:layout_marginBottom="200dp"
+        app:tint="@color/white" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:background="@color/blue"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/back_btn"
+            android:layout_width="110dp"
+            android:layout_height="wrap_content"
+            android:backgroundTint="@color/blue"
+            android:text="back"
+            android:textSize="16sp"
+            android:layout_gravity="bottom"
+            android:paddingRight="15dp"
+            android:drawableLeft="@drawable/back_arrow" />
+
+        <ToggleButton
+            android:id="@+id/toggleButton"
+            android:layout_width="160dp"
+            android:layout_height="wrap_content"
+            android:textOff="Arabic"
+            android:textOn="English"
+            android:layout_gravity="bottom"
+            android:layout_marginStart="8dp"/>
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            >
+
+            <ImageButton
+                android:id="@+id/flipCameraIB"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:src="@drawable/flip_camera"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:scaleType="centerCrop"
+                android:layout_alignParentEnd="true"
+                android:layout_marginTop="16dp"
+                android:layout_marginEnd="8dp"
+                app:tint="@color/white" />
+
+        </RelativeLayout>
+
+    </LinearLayout>
+
+
+    <androidx.cardview.widget.CardView
+        android:id="@+id/cardView"
+        android:layout_width="match_parent"
+        android:layout_height="180dp"
+        android:layout_alignParentBottom="true"
+        app:cardCornerRadius="20dp">
+
+        <RelativeLayout
+            android:id="@+id/bottomLayout"
+            android:layout_width="match_parent"
+            android:layout_height="180dp"
+            android:layout_alignParentBottom="true"
+            android:background="@color/blue">
+
+            <TextView
+                android:id="@+id/signText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_centerInParent="true"
+                android:gravity="center"
+                android:text=""
+                android:textColor="@color/black"
+                android:textSize="22sp" />
+
+            <Button
+                android:id="@+id/clear_btn"
+                android:layout_width="80dp"
+                android:layout_height="40dp"
+                android:layout_alignParentTop="true"
+                android:layout_alignParentEnd="true"
+                android:layout_margin="8dp"
+                android:backgroundTint="@color/dark_blue"
+                android:text="clear" />
+        </RelativeLayout>
+
+    </androidx.cardview.widget.CardView>
+
+    <Chronometer
+        android:id="@+id/recodingTimerC"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="10dp"
+        android:layout_marginTop="60dp"
+        android:text="00:00"
+        android:textColor="@color/white"
+        android:textSize="18sp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+</RelativeLayout>
